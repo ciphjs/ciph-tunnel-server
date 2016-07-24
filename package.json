@@ -1,0 +1,31 @@
+{
+  "name": "ciph-tunnel-server",
+  "version": "0.0.1",
+  "description": "Backend connector for clients",
+  "main": "index.js",
+  "scripts": {
+    "build": "rm -rf lib/ && exec coffee -c -o lib/ src/",
+    "start": "./bin/tunnel"
+  },
+  "bin": {
+    "tunnel": "./bin/tunnel"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ciphjs/ciph-tunnel-server.git"
+  },
+  "author": "Nick Iv",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ciphjs/ciph-tunnel-server/issues"
+  },
+  "homepage": "https://github.com/ciphjs/ciph-tunnel-server#readme",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "underscore": "^1.8.3",
+    "ws": "^1.1.1"
+  },
+  "devDependencies": {
+    "coffee-script": "^1.10.0"
+  }
+}

@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+var program = require('commander');
+var _       = require('underscore');
+var pkg     = require('../package.json');
+var Tunnel  = require('../lib/tunnel');
+
+program
+    .version(pkg.version)
+    .option('-H, --host [host]', 'Host of server')
+    .option('-P, --port [number]', 'Port of server')
+    .option('-t, --timeout [time]', 'Connection and request timeout')
+    .parse(process.argv);
+
+var options = _.pick(program, 'host', 'port', 'timeout');
+var tunnel  = new Tunnel(options);

@@ -30,7 +30,7 @@ class Tunnel
     disconnect: (cn, roomId, clientId)->
         cn.on 'close', =>
             delete @rooms[roomId][clientId]
-            @cleanupRooms()
+            delete @rooms[roomId] if _.isEmpty @rooms[roomId]
 
     message: (cn, data)->
         mes = null
@@ -53,7 +53,7 @@ class Tunnel
 
         clearTimeout cn._startTO
         @disconnect cn, roomId, clientId
-        @response cn, clientId, roomId, '/hello'
+        @response cn, null, 'tunnel', '/created', room: roomId, client: clientId
 
     tunnelMessage: (cn, mes, data)->
         return if not mes.host or not @rooms[mes.host] or not @rooms[mes.host][mes.auth]
@@ -81,10 +81,6 @@ class Tunnel
         hash = crypto.createHash('md5')
         hash.update _.uniqueId prefix + new Date().getTime()
         return hash.digest('hex').slice(0, 8)
-
-    cleanupRooms: ->
-        for room of @rooms
-            delete @rooms[room] if _.isEmpty @rooms[room]
 
 
 module.exports = Tunnel

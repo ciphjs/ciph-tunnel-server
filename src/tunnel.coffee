@@ -10,7 +10,7 @@ class Tunnel
         host: '0.0.0.0'
         timeout: 2000
 
-    rooms: {}
+    connections: {}
 
     constructor: (options) ->
         @options = _.extend {}, @options, options
@@ -27,10 +27,9 @@ class Tunnel
 
         connection.on 'message', _.bind @message, @, connection
 
-    disconnect: (cn, roomId, clientId)->
+    disconnect: (cn, clientId)->
         cn.on 'close', =>
-            delete @rooms[roomId][clientId]
-            delete @rooms[roomId] if _.isEmpty @rooms[roomId]
+            delete @connections[clientId]
 
     message: (cn, data)->
         mes = null
@@ -39,30 +38,24 @@ class Tunnel
 
         if mes.host is 'tunnel'
             switch mes.pathname
-                when '/connect_room' then @connectRoom cn, mes.query
+                when '/connect' then @connect cn, mes.query
 
         else
             @tunnelMessage cn, mes, data
 
-    connectRoom: (cn, q)->
-        roomId   = q.room   or @getUID 'r'
+    connect: (cn, q)->
         clientId = q.client or @getUID 'c'
+        clientId = @getUID 'c' if @connections[clientId]
 
-        @rooms[roomId] = {} unless @rooms[roomId]
-        @rooms[roomId][clientId] = cn
+        @connections[clientId] = cn
 
         clearTimeout cn._startTO
-        @disconnect cn, roomId, clientId
-        @response cn, null, 'tunnel', '/created', room: roomId, client: clientId
+        @disconnect cn, clientId
+        @response cn, null, 'tunnel', '/created', client: clientId
 
     tunnelMessage: (cn, mes, data)->
-        return if not mes.host or not @rooms[mes.host] or not @rooms[mes.host][mes.auth]
-        room = @rooms[mes.host]
-        currentClient = mes.auth
-
-        for client of room
-            unless client is currentClient
-                room[client].send data
+        return if not mes.host or not @connections[mes.host]
+        @connections[mes.host].send data
 
     response: (cn, c, h, m, q)->
         return unless h

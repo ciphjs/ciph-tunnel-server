@@ -28,8 +28,7 @@ class Tunnel
         connection.on 'message', _.bind @message, @, connection
 
     disconnect: (cn, clientId)->
-        cn.on 'close', =>
-            delete @connections[clientId]
+        cn.on 'close', => delete @connections[clientId]
 
     message: (cn, data)->
         mes = null
@@ -38,20 +37,41 @@ class Tunnel
 
         if mes.host is 'tunnel'
             switch mes.pathname
-                when '/connect' then @connect cn, mes.query
+                when '/connect'
+                    @connect cn, mes.query unless cn._tunnelled
+
+                when '/rename'
+                    @rename cn, mes.query if cn._tunnelled
 
         else
             @tunnelMessage cn, mes, data
 
     connect: (cn, q)->
+        hasParam = !!q.client
+        exists   = q.client and !!@connections[q.client]
+
         clientId = q.client or @getUID 'c'
-        clientId = @getUID 'c' if @connections[clientId]
+        clientId = @getUID 'c' if exists
 
         @connections[clientId] = cn
 
         clearTimeout cn._startTO
+        cn._tunnelled = clientId
+
         @disconnect cn, clientId
-        @response cn, null, 'tunnel', '/created', client: clientId
+        @response cn, null, 'tunnel', '/connected', client: clientId, exists: exists
+
+    rename: (cn, q)->
+        # Do nothing if no client parameter, or already exists or equal with current
+        return if not q.client or @connections[q.client] or cn._tunnelled is q.client
+
+        cn.removeAllListeners 'close'
+
+        clientId = q.client
+        cn._tunnelled = clientId
+
+        @disconnect cn, clientId
+        @response cn, null, 'tunnel', '/connected', client: clientId, exists: false
 
     tunnelMessage: (cn, mes, data)->
         return if not mes.host or not @connections[mes.host]

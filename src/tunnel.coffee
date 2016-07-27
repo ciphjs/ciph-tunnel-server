@@ -9,6 +9,8 @@ class Tunnel
         port: 8080
         host: '0.0.0.0'
         timeout: 2000
+        protocol: 'ciph:'
+        tunnel_name: 'tunnel'
 
     connections: {}
 
@@ -33,9 +35,9 @@ class Tunnel
     message: (cn, data)->
         mes = null
         try mes = url.parse data, true
-        return if not mes or mes.protocol isnt 'ciph:'
+        return if not mes or mes.protocol isnt @options.protocol
 
-        if mes.host is 'tunnel'
+        if mes.host is @options.tunnel_name
             switch mes.pathname
                 when '/connect'
                     @connect cn, mes.query unless cn._tunnelled
@@ -43,7 +45,7 @@ class Tunnel
                 when '/rename'
                     @rename cn, mes.query if cn._tunnelled
 
-        else
+        else if cn._tunnelled and mes.auth
             @tunnelMessage cn, mes, data
 
     connect: (cn, q)->
@@ -59,7 +61,7 @@ class Tunnel
         cn._tunnelled = clientId
 
         @disconnect cn, clientId
-        @response cn, null, 'tunnel', '/connected', client: clientId, exists: exists
+        @response cn, null, @options.tunnel_name, '/connected', client: clientId, exists: exists
 
     rename: (cn, q)->
         # Do nothing if no client parameter, or already exists or equal with current
@@ -71,17 +73,18 @@ class Tunnel
         cn._tunnelled = clientId
 
         @disconnect cn, clientId
-        @response cn, null, 'tunnel', '/connected', client: clientId, exists: false
+        @response cn, null, @options.tunnel_name, '/connected', client: clientId, exists: false
 
     tunnelMessage: (cn, mes, data)->
         return if not mes.host or not @connections[mes.host]
+        return if mes.auth isnt cn._tunnelled
         @connections[mes.host].send data
 
     response: (cn, c, h, m, q)->
         return unless h
 
         res = url.format
-            protocol: 'ciph:'
+            protocol: @options.protocol
             slashes: true
             auth: c or null
             host: h
@@ -91,7 +94,7 @@ class Tunnel
         cn?.send res
 
     getUID: (prefix='')->
-        hash = crypto.createHash('md5')
+        hash = crypto.createHash('sha1')
         hash.update _.uniqueId prefix + new Date().getTime()
         return hash.digest('hex').slice(0, 8)
 

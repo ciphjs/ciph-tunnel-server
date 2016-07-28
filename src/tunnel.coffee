@@ -94,9 +94,15 @@ class Tunnel
         cn?.send res
 
     getUID: (prefix='')->
-        hash = crypto.createHash('sha1')
-        hash.update _.uniqueId prefix + new Date().getTime()
-        return hash.digest('hex').slice(0, 8)
+        uid = null
+
+        generate = ->
+            hash = crypto.createHash('sha1')
+            hash.update _.uniqueId prefix + new Date().getTime()
+            return hash.digest('hex').slice(0, 8)
+
+        uid = generate() while not uid or @connections[uid] # Collision protection
+        return uid
 
 
 module.exports = Tunnel
